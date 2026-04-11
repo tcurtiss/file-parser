@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     drop(file); // pipeline opens the file itself
 
-    let state = Arc::new(state::AppState::new(file_size, remote, args.gui));
+    let state = Arc::new(state::AppState::new(file_size, remote, args.gui || args.quiet));
 
     state.log(&format!(
         "file-parser: {} | {:.2} GB | {} | {} worker{}",
@@ -62,6 +62,17 @@ fn main() -> Result<()> {
         });
     }
 
+    // Ctrl-C handler for non-GUI modes — sets cancel + complete so any
+    // waiting loop exits cleanly and indicatif can restore the terminal.
+    if !args.gui {
+        let state = Arc::clone(&state);
+        ctrlc::set_handler(move || {
+            state.cancel();
+            state.set_complete();
+        })
+        .ok();
+    }
+
     // Run the chosen UI — both block until the user exits or parsing completes
     if args.gui {
         let state_gui = Arc::clone(&state);
@@ -76,6 +87,10 @@ fn main() -> Result<()> {
             Box::new(move |_cc| Ok(Box::new(gui::App::new(state_gui)))),
         )
         .map_err(|e| anyhow::anyhow!("{e}"))?;
+    } else if args.quiet {
+        while !state.is_complete() {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
     } else {
         tui::run(Arc::clone(&state));
     }

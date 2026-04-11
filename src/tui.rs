@@ -4,7 +4,6 @@ use std::{
 };
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use ctrlc;
 
 use crate::state::{AppState, WorkerStatus};
 
@@ -12,17 +11,6 @@ const POLL_MS: u64 = 100;
 
 /// Run the TUI progress display, blocking until parsing is complete or cancelled.
 pub fn run(state: Arc<AppState>) {
-    // Ctrl-C: set cancel + complete so the polling loop exits cleanly,
-    // allowing indicatif to restore the terminal before the process ends.
-    {
-        let state = Arc::clone(&state);
-        ctrlc::set_handler(move || {
-            state.cancel();
-            state.set_complete();
-        })
-        .ok(); // ignore error if a handler is already registered
-    }
-
     let mp = MultiProgress::new();
 
     // Network transfer progress bar

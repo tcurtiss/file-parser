@@ -8,8 +8,12 @@ pub struct Args {
     pub file: PathBuf,
 
     /// Enable GUI mode
-    #[arg(long)]
+    #[arg(long, conflicts_with = "quiet")]
     pub gui: bool,
+
+    /// Suppress TUI progress indicators; run silently until complete
+    #[arg(long, short = 'q', conflicts_with = "gui")]
+    pub quiet: bool,
 
     /// Number of worker threads (defaults to available CPU count)
     #[arg(long, short)]
