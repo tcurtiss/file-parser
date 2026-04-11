@@ -17,30 +17,17 @@ pub struct SectionDef {
 /// Add or remove entries here to change what the parser looks for.
 pub const SECTIONS: &[SectionDef] = &[
     SectionDef {
-        name: "METADATA",
-        header_pattern: r"^=== METADATA ===",
+        name: "CAT",
+        header_pattern: r"^Cat Boundary \d+",
         content_patterns: &[
-            ("server",    r"server:\s*(\S+)"),
-            ("timestamp", r"timestamp:\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})"),
-            ("version",   r"version:\s*(\S+)"),
+            // TODO: add content patterns for CAT sections
         ],
     },
     SectionDef {
-        name: "RECORDS",
-        header_pattern: r"^=== RECORDS ===",
+        name: "DOG",
+        header_pattern: r"^Dog Boundary \d+",
         content_patterns: &[
-            ("date",  r"(\d{4}-\d{2}-\d{2})"),
-            ("ip",    r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"),
-            ("value", r"value=(\S+)"),
-        ],
-    },
-    SectionDef {
-        name: "EVENTS",
-        header_pattern: r"^=== EVENTS ===",
-        content_patterns: &[
-            ("level",   r"(INFO|WARN|ERROR|DEBUG)"),
-            ("message", r#"msg="([^"]+)""#),
-            ("code",    r"code=(\d+)"),
+            // TODO: add content patterns for DOG sections
         ],
     },
 ];
