@@ -1,0 +1,171 @@
+warning: field `section_idx` is never read
+ --> src/patterns.rs:7:9
+  |
+6 | pub struct CompiledSection {
+  |            --------------- field in this struct
+7 |     pub section_idx: usize,
+  |         ^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `name`, `header_pattern`, and `content_patterns` are never read
+  --> src/sections.rs:8:9
+   |
+ 6 | pub struct SectionDef {
+   |            ---------- fields in this struct
+ 7 |     /// Unique section identifier used in results and progress display
+ 8 |     pub name: &'static str,
+   |         ^^^^
+ 9 |     /// Regex pattern matched against each line to detect the section header
+10 |     pub header_pattern: &'static str,
+   |         ^^^^^^^^^^^^^^
+11 |     /// Named content patterns to match within this section: (label, regex)
+12 |     pub content_patterns: &'static [(&'static str, &'static str)],
+   |         ^^^^^^^^^^^^^^^^
+
+warning: variant `Failed` is never constructed
+  --> src/state.rs:11:5
+   |
+ 7 | pub enum WorkerStatus {
+   |          ------------ variant in this enum
+...
+11 |     Failed,
+   |     ^^^^^^
+   |
+   = note: `WorkerStatus` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `file-parser` (bin "file-parser") generated 3 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running `target/debug/file-parser --gui target/debug/file-parser`
+
+thread 'main' (3556214) panicked at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icrate-0.0.4/src/Foundation/../generated/Foundation/NSEnumerator.rs:6:1:
+invalid message send to -[_TtGCs23_ContiguousArrayStorageCSo8NSScreen_$ countByEnumeratingWithState:objects:count:]: expected return to have type code 'q', but found 'Q'
+stack backtrace:
+   0: __rustc::rust_begin_unwind
+             at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:689:5
+   1: core::panicking::panic_fmt
+             at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/panicking.rs:80:14
+   2: objc2::message::panic_verify
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/objc2-0.4.1/src/message/mod.rs:83:5
+   3: objc2::message::msg_send_check
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/objc2-0.4.1/src/message/mod.rs:71:5
+   4: objc2::message::MessageReceiver::send_message
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/objc2-0.4.1/src/message/mod.rs:231:13
+   5: icrate::Foundation::generated::__NSEnumerator::NSFastEnumeration::countByEnumeratingWithState_objects_count
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/objc2-0.4.1/src/macros/extern_protocol.rs:233:14
+   6: icrate::Foundation::additions::iter::FastEnumeratorHelper::load_next_items
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icrate-0.0.4/src/Foundation/additions/iter.rs:104:24
+   7: icrate::Foundation::additions::iter::FastEnumeratorHelper::next_from
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icrate-0.0.4/src/Foundation/additions/iter.rs:145:27
+   8: <icrate::Foundation::additions::iter::IntoIter<C> as core::iter::traits::iterator::Iterator>::next
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icrate-0.0.4/src/Foundation/additions/iter.rs:460:40
+   9: <icrate::Foundation::additions::array::IntoIter<T> as core::iter::traits::iterator::Iterator>::next
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icrate-0.0.4/src/Foundation/additions/iter.rs:707:24
+  10: core::iter::traits::iterator::Iterator::try_fold
+             at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/iter/traits/iterator.rs:2433:34
+  11: core::iter::traits::iterator::Iterator::find
+             at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/iter/traits/iterator.rs:2907:14
+  12: winit::platform_impl::platform::monitor::MonitorHandle::ns_screen
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/monitor.rs:308:41
+  13: winit::platform_impl::platform::monitor::MonitorHandle::scale_factor
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/monitor.rs:213:20
+  14: winit::platform_impl::platform::monitor::MonitorHandle::size
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/monitor.rs:200:82
+  15: winit::monitor::MonitorHandle::size
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/monitor.rs:119:20
+  16: eframe::native::epi_integration::largest_monitor_point_size
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/epi_integration.rs:113:14
+  17: eframe::native::epi_integration::viewport_builder
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/epi_integration.rs:57:30
+  18: eframe::native::glow_integration::GlowWinitApp::create_glutin_windowed_context
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/glow_integration.rs:156:36
+  19: eframe::native::glow_integration::GlowWinitApp::init_run_state
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/glow_integration.rs:212:37
+  20: <eframe::native::glow_integration::GlowWinitApp as eframe::native::winit_integration::WinitApp>::on_event
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/glow_integration.rs:429:26
+  21: eframe::native::run::run_and_return::{{closure}}
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eframe-0.28.1/src/native/run.rs:125:38
+  22: <winit::platform_impl::platform::app_state::EventLoopHandler<T> as winit::platform_impl::platform::app_state::EventHandler>::handle_nonuser_event::{{closure}}
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:87:13
+  23: winit::platform_impl::platform::app_state::EventLoopHandler<T>::with_callback
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:70:13
+  24: <winit::platform_impl::platform::app_state::EventLoopHandler<T> as winit::platform_impl::platform::app_state::EventHandler>::handle_nonuser_event
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:86:14
+  25: winit::platform_impl::platform::app_state::Handler::handle_nonuser_event
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:318:22
+  26: winit::platform_impl::platform::app_state::AppState::dispatch_init_events
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:454:17
+  27: winit::platform_impl::platform::app_state::AppState::start_running
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:462:9
+  28: winit::platform_impl::platform::app_state::AppState::launched
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_state.rs:487:9
+  29: winit::platform_impl::platform::app_delegate::ApplicationDelegate::did_finish_launching
+             at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winit-0.29.15/src/platform_impl/macos/app_delegate.rs:48:13
+  30: <unknown>
+  31: <unknown>
+  32: <unknown>
+  33: <unknown>
+  34: <unknown>
+  35: <unknown>
+  36: <unknown>
+  37: <unknown>
+  38: <unknown>
+  39: <unknown>
+  40: <unknown>
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+
+thread 'main' (3556214) panicked at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/panicking.rs:225:5:
+panic in a function that cannot unwind
+stack backtrace:
+   0:        0x102995180 - std::backtrace_rs::backtrace::libunwind::trace::h20610ee3ae735381
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/../../backtrace/src/backtrace/libunwind.rs:117:9
+   1:        0x102995180 - std::backtrace_rs::backtrace::trace_unsynchronized::hff76b47e60e1fd28
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+   2:        0x102995180 - std::sys::backtrace::_print_fmt::hb34ff4e47e06b2b4
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/sys/backtrace.rs:74:9
+   3:        0x102995180 - <std::sys::backtrace::BacktraceLock::print::DisplayBacktrace as core::fmt::Display>::fmt::hcde33371d8bba08b
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/sys/backtrace.rs:44:26
+   4:        0x1029a4358 - core::fmt::rt::Argument::fmt::hd56125919cfe63c7
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/fmt/rt.rs:152:76
+   5:        0x1029a4358 - core::fmt::write::h8a52dffc4df6d016
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/fmt/mod.rs:1686:22
+   6:        0x102975f44 - std::io::default_write_fmt::h10c66f8e301b5eef
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/io/mod.rs:639:11
+   7:        0x102975f44 - std::io::Write::write_fmt::h2fd0abc6933d662d
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/io/mod.rs:1994:13
+   8:        0x10297dfc8 - std::sys::backtrace::BacktraceLock::print::h5164080a6827b4ef
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/sys/backtrace.rs:47:25
+   9:        0x10297dfc8 - std::panicking::default_hook::{{closure}}::h1af7615be47c43ab
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:292:27
+  10:        0x10297dec8 - std::panicking::default_hook::hdcc779fdbf67ae29
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:319:9
+  11:        0x10297e3c0 - std::panicking::panic_with_hook::h455d3ea9bab4bcbd
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:825:13
+  12:        0x10297e0a0 - std::panicking::panic_handler::{{closure}}::h2068a0d88ec25e56
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:691:13
+  13:        0x10297b520 - std::sys::backtrace::__rust_end_short_backtrace::h7bea34f9056001ee
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/sys/backtrace.rs:182:18
+  14:        0x10296f8e8 - __rustc[4425a7e20b4c8619]::rust_begin_unwind
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/std/src/panicking.rs:689:5
+  15:        0x1029d209c - core::panicking::panic_nounwind_fmt::runtime::h898d6bde41a6c59a
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/panicking.rs:122:22
+  16:        0x1029d209c - core::panicking::panic_nounwind_fmt::h8c81167db7c868a6
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/intrinsics/mod.rs:2432:9
+  17:        0x1029d2024 - core::panicking::panic_nounwind::h08cd4682ec06fdd2
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/panicking.rs:225:5
+  18:        0x1029d2178 - core::panicking::panic_cannot_unwind::he03186bb60af78b0
+                               at /rustc/4a4ef493e3a1488c6e321570238084b38948f6db/library/core/src/panicking.rs:337:5
+  19:        0x102648c14 - winit::platform_impl::platform::app_delegate::ApplicationDelegate::did_finish_launching::h24d62e1c6c38b172
+                               at /Users/tcurtiss/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/objc2-0.4.1/src/macros/declare_class.rs:1015:25
+  20:        0x18485564c - <unknown>
+  21:        0x1848e1abc - <unknown>
+  22:        0x1848e1a00 - <unknown>
+  23:        0x184824170 - <unknown>
+  24:        0x1860584a4 - <unknown>
+  25:        0x188c935e8 - <unknown>
+  26:        0x188c93380 - <unknown>
+  27:        0x188c919c4 - <unknown>
+  28:        0x188c915d8 - <unknown>
+  29:        0x186080fbc - <unknown>
+  30:        0x186080db4 - <unknown>
+thread caused non-unwinding panic. aborting.
