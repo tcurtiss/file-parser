@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     drop(file); // pipeline opens the file itself
 
-    let state = Arc::new(state::AppState::new(file_size, args.gui));
+    let state = Arc::new(state::AppState::new(file_size, remote, args.gui));
 
     state.log(&format!(
         "file-parser: {} | {:.2} GB | {} | {} worker{}",

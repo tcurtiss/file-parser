@@ -13,19 +13,27 @@ const POLL_MS: u64 = 100;
 pub fn run(state: Arc<AppState>) {
     let mp = MultiProgress::new();
 
-    // Network / local read progress bar
+    // Network transfer progress bar
     let net_bar = mp.add(ProgressBar::new(
         state.net_bytes_total.load(Ordering::Relaxed),
     ));
-    net_bar.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.cyan} {msg} [{bar:45.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})",
-        )
-        .unwrap()
-        .progress_chars("█▉▊▋▌▍▎▏░"),
-    );
-    net_bar.set_message("Reading file");
-    net_bar.enable_steady_tick(Duration::from_millis(80));
+    if state.remote {
+        net_bar.set_style(
+            ProgressStyle::with_template(
+                "{spinner:.cyan} {msg} [{bar:45.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})",
+            )
+            .unwrap()
+            .progress_chars("█▉▊▋▌▍▎▏░"),
+        );
+        net_bar.set_message("Network transfer");
+        net_bar.enable_steady_tick(Duration::from_millis(80));
+    } else {
+        net_bar.set_style(
+            ProgressStyle::with_template("{msg}")
+                .unwrap(),
+        );
+        net_bar.finish_with_message("Network transfer  [local file, skipped]");
+    }
 
     let worker_style = ProgressStyle::with_template(
         "{spinner:.green} {msg:<25} [{bar:45.green/dim}] {percent:>3}%  {pos}/{len} bytes  {wide_msg}",
@@ -80,7 +88,9 @@ pub fn run(state: Arc<AppState>) {
         std::thread::sleep(Duration::from_millis(POLL_MS));
     }
 
-    net_bar.finish_with_message("Done");
+    if state.remote {
+        net_bar.finish_with_message("Network transfer  [done]");
+    }
 
     // Summary
     let results = state.results.lock().unwrap();

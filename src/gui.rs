@@ -26,19 +26,26 @@ impl eframe::App for App {
             // ── File transfer progress ─────────────────────────────────────
             ui.label(egui::RichText::new("File Transfer").strong());
 
-            let net_done  = self.state.net_bytes_done.load(Ordering::Relaxed);
-            let net_total = self.state.net_bytes_total.load(Ordering::Relaxed);
-            let net_pct   = self.state.net_progress();
-
-            ui.add(
-                egui::ProgressBar::new(net_pct)
-                    .text(format!(
-                        "{:.1} / {:.1} MB",
-                        net_done  as f64 / 1e6,
-                        net_total as f64 / 1e6,
-                    ))
-                    .animate(!self.state.is_complete()),
-            );
+            if self.state.remote {
+                let net_done  = self.state.net_bytes_done.load(Ordering::Relaxed);
+                let net_total = self.state.net_bytes_total.load(Ordering::Relaxed);
+                let net_pct   = self.state.net_progress();
+                ui.add(
+                    egui::ProgressBar::new(net_pct)
+                        .text(format!(
+                            "{:.1} / {:.1} MB",
+                            net_done  as f64 / 1e6,
+                            net_total as f64 / 1e6,
+                        ))
+                        .animate(!self.state.is_complete()),
+                );
+            } else {
+                ui.add(
+                    egui::ProgressBar::new(1.0)
+                        .text("local file, skipped")
+                        .fill(egui::Color32::from_rgb(100, 100, 100)),
+                );
+            }
 
             ui.add_space(8.0);
             ui.separator();

@@ -50,17 +50,19 @@ pub struct AppState {
     pub net_bytes_total: AtomicU64,
     pub workers:         Mutex<Vec<Arc<WorkerState>>>,
     pub results:         Mutex<Vec<ParseResult>>,
+    pub remote:          bool,
     complete:            AtomicBool,
     silent:              bool,
 }
 
 impl AppState {
-    pub fn new(file_size: u64, silent: bool) -> Self {
+    pub fn new(file_size: u64, remote: bool, silent: bool) -> Self {
         Self {
             net_bytes_done:  AtomicU64::new(0),
             net_bytes_total: AtomicU64::new(file_size),
             workers:         Mutex::new(Vec::new()),
             results:         Mutex::new(Vec::new()),
+            remote,
             complete:        AtomicBool::new(false),
             silent,
         }
