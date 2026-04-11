@@ -1,0 +1,28 @@
+[package]
+name    = "file-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap       = { version = "4",    features = ["derive"] }
+memmap2    = "0.9"
+rayon      = "1"
+indicatif  = { version = "0.17", features = ["rayon"] }
+egui       = "0.28"
+eframe     = "0.28"
+libc       = "0.2"
+anyhow     = "1"
+# vectorscan = "0.1"   # TODO: uncomment when implementing pattern matching
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Storage_FileSystem",
+    "Win32_Foundation",
+] }
+
+[profile.release]
+opt-level     = "z"
+lto           = true
+codegen-units = 1
+panic         = "abort"
+strip         = true
