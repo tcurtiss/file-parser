@@ -24,6 +24,10 @@ pub fn run(path: &Path, state: Arc<AppState>, _workers: usize) -> Result<()> {
     // Pass 1 — single-threaded linear scan for section boundaries
     let boundaries = scan_boundaries(&mmap);
 
+    if state.is_cancelled() {
+        return Ok(());
+    }
+
     if boundaries.is_empty() {
         state.log("warning: no section boundaries found");
         state.set_complete();

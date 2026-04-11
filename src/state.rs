@@ -52,6 +52,7 @@ pub struct AppState {
     pub results:         Mutex<Vec<ParseResult>>,
     pub remote:          bool,
     complete:            AtomicBool,
+    cancelled:           AtomicBool,
     silent:              bool,
 }
 
@@ -64,6 +65,7 @@ impl AppState {
             results:         Mutex::new(Vec::new()),
             remote,
             complete:        AtomicBool::new(false),
+            cancelled:       AtomicBool::new(false),
             silent,
         }
     }
@@ -87,5 +89,13 @@ impl AppState {
 
     pub fn set_complete(&self) {
         self.complete.store(true, Ordering::Relaxed);
+    }
+
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
     }
 }

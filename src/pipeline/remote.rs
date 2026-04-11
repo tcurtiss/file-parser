@@ -81,7 +81,7 @@ pub fn run(path: &Path, state: Arc<AppState>, _workers: usize) -> Result<()> {
         // 3. for each completed section, submit to worker pool
         // 4. collect results into state
 
-        if done { break; }
+        if done || state.is_cancelled() { break; }
         thread::sleep(Duration::from_millis(100));
         let _ = written;
     }
