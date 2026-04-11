@@ -14,7 +14,8 @@ libc       = "0.2"
 anyhow     = "1"
 ctrlc      = "3"
 ureq       = "2"
-# vectorscan = "0.1"   # TODO: uncomment when implementing pattern matching
+regex      = "1"
+# vectorscan = "0.1"   # TODO: replace regex crate when implementing vectorscan
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = [

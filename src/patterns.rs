@@ -1,16 +1,15 @@
+use regex::bytes::Regex;
+
 use crate::sections::{SectionDef, SECTIONS};
 
 /// Compiled patterns for a single section, ready to scan against raw bytes.
-///
-/// TODO: backed by vectorscan for multi-pattern single-pass matching.
 pub struct CompiledSection {
     pub section_idx: usize,
-    // TODO: vectorscan database and scratch space per section
+    /// (label, compiled regex) for each content pattern in this section
+    pub patterns: Vec<(String, Regex)>,
 }
 
-/// Compile patterns for all sections upfront so workers share read-only databases.
-///
-/// TODO: implement using vectorscan hs_compile_multi() per section.
+/// Compile content patterns for all sections upfront so workers share read-only data.
 pub fn compile_all() -> anyhow::Result<Vec<CompiledSection>> {
     SECTIONS
         .iter()
@@ -20,10 +19,15 @@ pub fn compile_all() -> anyhow::Result<Vec<CompiledSection>> {
 }
 
 fn compile_section(section_idx: usize, section: &SectionDef) -> anyhow::Result<CompiledSection> {
-    let _ = section;
-    // TODO:
-    // 1. collect section.content_patterns into pattern + flags arrays
-    // 2. call hs_compile_multi() / vectorscan equivalent
-    // 3. store resulting database in CompiledSection
-    Ok(CompiledSection { section_idx })
+    let patterns = section
+        .content_patterns
+        .iter()
+        .map(|(label, pat)| {
+            let re = Regex::new(pat)
+                .map_err(|e| anyhow::anyhow!("bad pattern {pat:?}: {e}"))?;
+            Ok((label.to_string(), re))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+    Ok(CompiledSection { section_idx, patterns })
 }

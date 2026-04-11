@@ -20,14 +20,14 @@ pub const SECTIONS: &[SectionDef] = &[
         name: "CAT",
         header_pattern: r"^Cat Boundary \d+",
         content_patterns: &[
-            // TODO: add content patterns for CAT sections
+            ("value", r"AddVal (\d+)"),
         ],
     },
     SectionDef {
         name: "DOG",
         header_pattern: r"^Dog Boundary \d+",
         content_patterns: &[
-            // TODO: add content patterns for DOG sections
+            ("value", r"AddVal (\d+)"),
         ],
     },
 ];
