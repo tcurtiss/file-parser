@@ -12,6 +12,7 @@ egui       = "0.34"
 eframe     = "0.34"
 libc       = "0.2"
 anyhow     = "1"
+ctrlc      = "3"
 # vectorscan = "0.1"   # TODO: uncomment when implementing pattern matching
 
 [target.'cfg(windows)'.dependencies]
