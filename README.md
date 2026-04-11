@@ -52,23 +52,117 @@ file-parser --workers 8 /data/large-log.txt
 
 ## Adding or Removing Sections
 
-Open `src/sections.rs` and edit the `SECTIONS` array. Each entry defines:
+All section configuration lives in `src/sections.rs`. To add a section, append a `SectionDef` to the `SECTIONS` array. To remove one, delete its entry. Order in the array determines priority when a line matches multiple headers.
 
-- `name` — identifier shown in progress and results
-- `header_pattern` — regex matched against each line to detect the section start
-- `content_patterns` — list of `(label, regex)` pairs to match within the section; capture group 1 is extracted as the value
+### Section structure
 
 ```rust
 SectionDef {
-    name: "CAT",
-    header_pattern: r"^Cat Boundary \d+",
-    content_patterns: &[
-        ("value", r"AddVal (\d+)"),
-    ],
-},
+    name:             "BIRD",
+    header_pattern:   r"^Bird Boundary \d+",
+    content_patterns: &[ /* one or more ContentPattern entries */ ],
+    finalizer:        finalizers::identity,
+}
 ```
 
-For each content pattern, all capture group 1 matches within the section are parsed as integers and summed. The total is reported as the result for that label when the section completes.
+| Field | Type | Purpose |
+|-------|------|---------|
+| `name` | `&str` | Identifier shown in progress display and results |
+| `header_pattern` | `&str` (regex) | Matched against each line to detect where the section starts; supports `^` anchors |
+| `content_patterns` | `&[ContentPattern]` | Patterns to match within the section (see below) |
+| `finalizer` | `fn(Vec<ParseResult>) -> Vec<ParseResult>` | Post-processes all pattern results for this section boundary |
+
+### Content patterns
+
+Each `ContentPattern` defines what to match and how to aggregate the matches:
+
+```rust
+ContentPattern {
+    label:   "total",          // shown in results
+    regex:   r"AddVal (\d+)", // capture group 1 is passed to the handler
+    handler: handlers::sum,   // aggregation function
+}
+```
+
+The handler is called once per section boundary with a slice of all captures (group 1 if the pattern has one, full match otherwise). It returns a single `String` value for the result.
+
+#### Built-in handlers (`handlers::*`)
+
+| Handler | Behaviour |
+|---------|-----------|
+| `handlers::sum` | Parse captures as `u64` and return the sum |
+| `handlers::count` | Return the number of matches as a string |
+| `handlers::first` | Return the first capture verbatim; empty string if no matches |
+| `handlers::collect` | Join all captures with `", "` |
+
+#### Custom handler
+
+Any `fn(&[&[u8]]) -> String` function can be used as a handler:
+
+```rust
+fn sum_hex(captures: &[&[u8]]) -> String {
+    captures.iter()
+        .filter_map(|c| std::str::from_utf8(c).ok())
+        .filter_map(|s| u64::from_str_radix(s, 16).ok())
+        .sum::<u64>()
+        .to_string()
+}
+
+ContentPattern { label: "hex_total", regex: r"0x([0-9a-fA-F]+)", handler: sum_hex }
+```
+
+### Finalizers
+
+A finalizer receives the `Vec<ParseResult>` produced by all content patterns for one section boundary and may transform, filter, or augment them before they are stored.
+
+#### Built-in finalizer
+
+`finalizers::identity` — returns results unchanged. Use this when no post-processing is needed.
+
+#### Custom finalizer
+
+Any `fn(Vec<ParseResult>) -> Vec<ParseResult>` function can be used:
+
+```rust
+use crate::state::ParseResult;
+
+// Suppress any result whose value is "0"
+fn drop_zeros(mut results: Vec<ParseResult>) -> Vec<ParseResult> {
+    results.retain(|r| r.value != "0");
+    results
+}
+
+// Append a grand-total row summing all numeric results
+fn add_grand_total(mut results: Vec<ParseResult>) -> Vec<ParseResult> {
+    let total: u64 = results.iter()
+        .filter_map(|r| r.value.parse::<u64>().ok())
+        .sum();
+    results.push(ParseResult {
+        section: results[0].section.clone(),
+        label:   "grand_total".into(),
+        offset:  results[0].offset,
+        value:   total.to_string(),
+    });
+    results
+}
+```
+
+Then reference it in `SECTIONS`:
+
+```rust
+SectionDef {
+    name:             "BIRD",
+    header_pattern:   r"^Bird Boundary \d+",
+    content_patterns: &[
+        ContentPattern { label: "total",  regex: r"AddVal (\d+)",       handler: handlers::sum     },
+        ContentPattern { label: "events", regex: r"^Event \w+",         handler: handlers::count   },
+        ContentPattern { label: "host",   regex: r"Host: (\S+)",        handler: handlers::first   },
+        ContentPattern { label: "tags",   regex: r"Tag=(\w+)",          handler: handlers::collect },
+        ContentPattern { label: "hex",    regex: r"0x([0-9a-fA-F]+)",   handler: sum_hex           },
+    ],
+    finalizer: add_grand_total,
+}
+```
 
 ## Building
 
