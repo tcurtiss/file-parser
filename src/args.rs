@@ -1,11 +1,11 @@
 use clap::Parser;
-use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "file-parser", about = "High-performance large file parser")]
 pub struct Args {
-    /// Path to the file to parse
-    pub file: PathBuf,
+    /// File to parse — accepts a filesystem path or a URL
+    /// (http://, https://, ftp://, ftps://)
+    pub file: String,
 
     /// Enable GUI mode
     #[arg(long, conflicts_with = "quiet")]

@@ -13,27 +13,40 @@ const POLL_MS: u64 = 100;
 pub fn run(state: Arc<AppState>) {
     let mp = MultiProgress::new();
 
-    // Network transfer progress bar
-    let net_bar = mp.add(ProgressBar::new(
-        state.net_bytes_total.load(Ordering::Relaxed),
-    ));
-    if state.remote {
-        net_bar.set_style(
-            ProgressStyle::with_template(
-                "{spinner:.cyan} {msg} [{bar:45.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})",
-            )
-            .unwrap()
-            .progress_chars("█▉▊▋▌▍▎▏░"),
-        );
-        net_bar.set_message("Network transfer");
-        net_bar.enable_steady_tick(Duration::from_millis(80));
-    } else {
-        net_bar.set_style(
-            ProgressStyle::with_template("{msg}")
+    // Transfer progress bar — style depends on remote vs local, and whether
+    // the total size is known (URLs may not provide Content-Length).
+    let net_total = state.net_bytes_total.load(Ordering::Relaxed);
+    let net_bar = if state.remote {
+        let bar = mp.add(if net_total > 0 {
+            ProgressBar::new(net_total)
+        } else {
+            ProgressBar::new_spinner()
+        });
+        if net_total > 0 {
+            bar.set_style(
+                ProgressStyle::with_template(
+                    "{spinner:.cyan} {msg} [{bar:45.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})",
+                )
+                .unwrap()
+                .progress_chars("█▉▊▋▌▍▎▏░"),
+            );
+        } else {
+            bar.set_style(
+                ProgressStyle::with_template(
+                    "{spinner:.cyan} {msg}  {bytes} downloaded ({bytes_per_sec})",
+                )
                 .unwrap(),
-        );
-        net_bar.finish_with_message("Network transfer  [local file, skipped]");
-    }
+            );
+        }
+        bar.set_message(state.transfer_label);
+        bar.enable_steady_tick(Duration::from_millis(80));
+        bar
+    } else {
+        let bar = mp.add(ProgressBar::new(0));
+        bar.set_style(ProgressStyle::with_template("{msg}").unwrap());
+        bar.finish_with_message(format!("{}  [local file, skipped]", state.transfer_label));
+        bar
+    };
 
     let worker_style = ProgressStyle::with_template(
         "{spinner:.green} {msg:<25} [{bar:45.green/dim}] {percent:>3}%  {pos}/{len} bytes  {wide_msg}",
@@ -45,9 +58,16 @@ pub fn run(state: Arc<AppState>) {
     let mut worker_bars: Vec<ProgressBar> = Vec::new();
 
     loop {
-        // Update network bar
+        // Update transfer bar — tick advances the spinner; set_position updates
+        // the bar when the total is known.
         let net_done = state.net_bytes_done.load(Ordering::Relaxed);
-        net_bar.set_position(net_done);
+        if state.remote {
+            let net_total = state.net_bytes_total.load(Ordering::Relaxed);
+            if net_total > 0 {
+                net_bar.set_length(net_total);
+                net_bar.set_position(net_done);
+            }
+        }
 
         // Add bars for any newly registered workers
         let workers = state.workers.lock().unwrap();
@@ -101,7 +121,7 @@ pub fn run(state: Arc<AppState>) {
     }
 
     if state.remote {
-        net_bar.finish_with_message("Network transfer  [done]");
+        net_bar.finish_with_message(format!("{}  [done]", state.transfer_label));
     }
 
     // Summary

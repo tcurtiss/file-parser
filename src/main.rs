@@ -4,6 +4,7 @@ mod gui;
 mod patterns;
 mod pipeline;
 mod sections;
+mod source;
 mod state;
 mod storage;
 mod tui;
@@ -18,41 +19,53 @@ use eframe::egui;
 fn main() -> Result<()> {
     let args = args::Args::parse();
 
-    let file      = std::fs::File::open(&args.file)?;
-    let file_size = file.metadata()?.len();
-    let workers   = args.workers.unwrap_or_else(available_threads);
+    let src = source::Source::parse(&args.file);
 
-    // Detect whether the file lives on network storage
-    let remote = if args.force_remote {
-        true
-    } else if args.force_local {
-        false
-    } else {
-        storage::is_remote(&file)?
+    // For file sources: open to get size and detect local/remote.
+    // For URL sources: size is unknown until the HTTP response arrives;
+    //                  the pipeline will update net_bytes_total once connected.
+    let (file_size, remote) = match src.as_path() {
+        Some(path) => {
+            let file = std::fs::File::open(path)?;
+            let size = file.metadata()?.len();
+            let remote = if args.force_remote {
+                true
+            } else if args.force_local {
+                false
+            } else {
+                storage::is_remote(&file)?
+            };
+            (size, remote)
+        }
+        None => (0u64, true), // URL — always remote, size learned later
     };
 
-    drop(file); // pipeline opens the file itself
+    let workers        = args.workers.unwrap_or_else(available_threads);
+    let silent         = args.gui || args.quiet;
+    let transfer_label = src.transfer_label();
 
-    let state = Arc::new(state::AppState::new(file_size, remote, args.gui || args.quiet));
+    let state = Arc::new(state::AppState::new(file_size, remote, transfer_label, silent));
 
     state.log(&format!(
-        "file-parser: {} | {:.2} GB | {} | {} worker{}",
-        args.file.display(),
-        file_size as f64 / 1e9,
+        "file-parser: {} | {} | {} | {} worker{}",
+        src.display(),
+        if file_size > 0 { format!("{:.2} GB", file_size as f64 / 1e9) }
+                         else { "size unknown".to_string() },
         if remote { "remote" } else { "local" },
         workers,
         if workers == 1 { "" } else { "s" },
     ));
 
-    // Spawn the parser pipeline in a background thread so the UI stays responsive
+    // Spawn the parser pipeline in a background thread
     {
         let state = Arc::clone(&state);
-        let path  = args.file.clone();
 
         std::thread::spawn(move || {
             let result = if remote {
-                pipeline::remote::run(&path, Arc::clone(&state), workers)
+                pipeline::remote::run(src, Arc::clone(&state), workers)
             } else {
+                // src is guaranteed to be a File here (URLs are always remote)
+                let path = src.as_path().unwrap().to_path_buf();
                 pipeline::local::run(&path, Arc::clone(&state), workers)
             };
             if let Err(e) = result {
@@ -62,8 +75,7 @@ fn main() -> Result<()> {
         });
     }
 
-    // Ctrl-C handler for non-GUI modes — sets cancel + complete so any
-    // waiting loop exits cleanly and indicatif can restore the terminal.
+    // Ctrl-C handler for non-GUI modes
     if !args.gui {
         let state = Arc::clone(&state);
         ctrlc::set_handler(move || {
@@ -73,7 +85,7 @@ fn main() -> Result<()> {
         .ok();
     }
 
-    // Run the chosen UI — both block until the user exits or parsing completes
+    // Run the chosen UI
     if args.gui {
         let state_gui = Arc::clone(&state);
         eframe::run_native(

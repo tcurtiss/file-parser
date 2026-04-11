@@ -45,21 +45,35 @@ impl eframe::App for App {
         ui.separator();
 
         // ── File transfer progress ─────────────────────────────────────
-        ui.label(egui::RichText::new("File Transfer").strong());
+        ui.label(egui::RichText::new(self.state.transfer_label).strong());
 
         if self.state.remote {
             let net_done  = self.state.net_bytes_done.load(Ordering::Relaxed);
             let net_total = self.state.net_bytes_total.load(Ordering::Relaxed);
-            let net_pct   = self.state.net_progress();
-            ui.add(
-                egui::ProgressBar::new(net_pct)
-                    .text(format!(
-                        "{:.1} / {:.1} MB",
-                        net_done  as f64 / 1e6,
-                        net_total as f64 / 1e6,
-                    ))
-                    .animate(!self.state.is_complete()),
-            );
+            let animating = !self.state.is_complete();
+
+            match self.state.net_progress() {
+                Some(pct) => {
+                    // Known size — show percentage and bytes
+                    ui.add(
+                        egui::ProgressBar::new(pct)
+                            .text(format!(
+                                "{:.1} / {:.1} MB",
+                                net_done  as f64 / 1e6,
+                                net_total as f64 / 1e6,
+                            ))
+                            .animate(animating),
+                    );
+                }
+                None => {
+                    // Unknown size (e.g. URL without Content-Length) — indeterminate
+                    ui.add(
+                        egui::ProgressBar::new(0.0)
+                            .text(format!("{:.1} MB downloaded", net_done as f64 / 1e6))
+                            .animate(animating),
+                    );
+                }
+            }
         } else {
             ui.add(
                 egui::ProgressBar::new(1.0)

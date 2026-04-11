@@ -46,21 +46,28 @@ pub struct ParseResult {
 }
 
 pub struct AppState {
-    pub net_bytes_done:  AtomicU64,
-    pub net_bytes_total: AtomicU64,
-    pub workers:         Mutex<Vec<Arc<WorkerState>>>,
-    pub results:         Mutex<Vec<ParseResult>>,
-    pub remote:          bool,
-    complete:            AtomicBool,
-    cancelled:           AtomicBool,
-    silent:              bool,
+    pub net_bytes_done:   AtomicU64,
+    pub net_bytes_total:  AtomicU64,
+    pub transfer_label:   &'static str,
+    pub workers:          Mutex<Vec<Arc<WorkerState>>>,
+    pub results:          Mutex<Vec<ParseResult>>,
+    pub remote:           bool,
+    complete:             AtomicBool,
+    cancelled:            AtomicBool,
+    silent:               bool,
 }
 
 impl AppState {
-    pub fn new(file_size: u64, remote: bool, silent: bool) -> Self {
+    pub fn new(
+        file_size:      u64,
+        remote:         bool,
+        transfer_label: &'static str,
+        silent:         bool,
+    ) -> Self {
         Self {
             net_bytes_done:  AtomicU64::new(0),
             net_bytes_total: AtomicU64::new(file_size),
+            transfer_label,
             workers:         Mutex::new(Vec::new()),
             results:         Mutex::new(Vec::new()),
             remote,
@@ -77,10 +84,12 @@ impl AppState {
         }
     }
 
-    pub fn net_progress(&self) -> f32 {
+    /// Returns the transfer fraction in 0.0..=1.0, or None when the total
+    /// is unknown (e.g. a URL with no Content-Length header).
+    pub fn net_progress(&self) -> Option<f32> {
         let done  = self.net_bytes_done.load(Ordering::Relaxed) as f32;
         let total = self.net_bytes_total.load(Ordering::Relaxed) as f32;
-        if total == 0.0 { 1.0 } else { (done / total).clamp(0.0, 1.0) }
+        if total == 0.0 { None } else { Some((done / total).clamp(0.0, 1.0)) }
     }
 
     pub fn is_complete(&self) -> bool {
