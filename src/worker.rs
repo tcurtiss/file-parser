@@ -11,8 +11,11 @@ use crate::{
 /// Parse a single section of the file, applying all compiled patterns for that section type.
 /// Registers a `WorkerState` in `state`, updates progress as it runs, and returns all matches.
 ///
-/// For each content pattern the matched `\d+` numbers are accumulated and a single
-/// summary `ParseResult` is returned with the total as its value.
+/// For each content pattern:
+///   1. All captures (group 1 if present, full match otherwise) are collected.
+///   2. The pattern's `handler` is called with those captures to produce a value string.
+///   3. A `ParseResult` is pushed for that pattern.
+/// After all patterns are processed, the section's `finalizer` is called on the results.
 ///
 /// Designed to be called from a rayon thread pool — takes shared references only.
 pub fn parse_section(
@@ -34,31 +37,35 @@ pub fn parse_section(
 
     let mut results = Vec::new();
 
-    for (label, re) in &compiled.patterns {
-        let mut sum: u64 = 0;
-        let mut count: u64 = 0;
+    for compiled_pattern in &compiled.patterns {
+        // Collect captures for this pattern across the whole section.
+        // Use group 1 when present; fall back to the full match (group 0) so
+        // that count/collect handlers work on patterns without a capture group.
+        let owned_caps: Vec<Vec<u8>> = compiled_pattern.regex
+            .captures_iter(section_data)
+            .map(|caps| {
+                caps.get(1)
+                    .unwrap_or_else(|| caps.get(0).unwrap()) // group 0 always exists
+                    .as_bytes()
+                    .to_vec()
+            })
+            .collect();
 
-        for caps in re.captures_iter(section_data) {
-            // Group 1 holds the captured \d+
-            if let Some(m) = caps.get(1) {
-                if let Ok(s) = std::str::from_utf8(m.as_bytes()) {
-                    if let Ok(n) = s.parse::<u64>() {
-                        sum   += n;
-                        count += 1;
-                    }
-                }
-            }
-        }
+        worker.matches.fetch_add(owned_caps.len() as u64, Ordering::Relaxed);
 
-        worker.matches.fetch_add(count, Ordering::Relaxed);
+        let cap_refs: Vec<&[u8]> = owned_caps.iter().map(Vec::as_slice).collect();
+        let value = (compiled_pattern.handler)(&cap_refs);
 
         results.push(ParseResult {
             section: section_def.name.to_string(),
-            label:   label.clone(),
+            label:   compiled_pattern.label.clone(),
             offset:  boundary.start,
-            value:   sum.to_string(),
+            value,
         });
     }
+
+    // Apply per-section finalizer
+    let results = (section_def.finalizer)(results);
 
     worker.bytes_done.store(section_data.len() as u64, Ordering::Relaxed);
     *worker.status.lock().unwrap() = WorkerStatus::Done;
@@ -110,8 +117,14 @@ mod tests {
     fn no_addval_lines_yields_zero_sum() {
         let data = include_bytes!("../tests/fixtures/no_addval.txt");
         let results = run_parse(data);
-        assert_eq!(results.len(), 2); // one result per section
-        assert!(results.iter().all(|r| r.value == "0"));
+        // Numeric aggregations (sum, count) must be zero
+        assert!(results.iter()
+            .filter(|r| r.label == "value" || r.label == "events")
+            .all(|r| r.value == "0"));
+        // String aggregations (first, collect) must be empty
+        assert!(results.iter()
+            .filter(|r| r.label == "host" || r.label == "tags")
+            .all(|r| r.value.is_empty()));
     }
 
     #[test]
@@ -125,9 +138,10 @@ mod tests {
     fn preamble_addval_not_counted() {
         let data = include_bytes!("../tests/fixtures/preamble.txt");
         let results = run_parse(data);
-        assert_eq!(results.len(), 1);
-        let cat = results.iter().find(|r| r.section == "CAT").unwrap();
-        assert_eq!(cat.value, "42"); // preamble AddVal 999 must be excluded
+        // One CAT section with four patterns — no DOG sections
+        assert!(results.iter().all(|r| r.section == "CAT"));
+        let sum = results.iter().find(|r| r.label == "value").unwrap();
+        assert_eq!(sum.value, "42"); // preamble AddVal 999 must be excluded
     }
 
     // ── Multiple boundaries ────────────────────────────────────────────────
@@ -136,21 +150,140 @@ mod tests {
     fn multiple_boundaries_produce_independent_sums() {
         let data = include_bytes!("../tests/fixtures/multi_boundary.txt");
         let results = run_parse(data);
-        let cats: Vec<_> = results.iter().filter(|r| r.section == "CAT").collect();
-        let dogs: Vec<_> = results.iter().filter(|r| r.section == "DOG").collect();
-        assert_eq!(cats.len(), 2);
-        assert_eq!(dogs.len(), 2);
-        // Each boundary is summed independently, not merged
-        let cat_sums: Vec<u64> = cats.iter().map(|r| r.value.parse().unwrap()).collect();
-        let dog_sums: Vec<u64> = dogs.iter().map(|r| r.value.parse().unwrap()).collect();
+        // Filter to the "value" (sum) label to isolate numeric results
+        let cat_sums: Vec<u64> = results.iter()
+            .filter(|r| r.section == "CAT" && r.label == "value")
+            .map(|r| r.value.parse().unwrap())
+            .collect();
+        let dog_sums: Vec<u64> = results.iter()
+            .filter(|r| r.section == "DOG" && r.label == "value")
+            .map(|r| r.value.parse().unwrap())
+            .collect();
         assert_eq!(cat_sums, vec![100, 200]);
         assert_eq!(dog_sums, vec![50, 75]);
     }
 
     #[test]
-    fn result_label_matches_content_pattern_name() {
+    fn result_labels_match_section_patterns() {
         let data = include_bytes!("../tests/fixtures/one_of_each.txt");
         let results = run_parse(data);
-        assert!(results.iter().all(|r| r.label == "value"));
+        // CAT has four patterns; DOG has one
+        let cat_labels: std::collections::HashSet<&str> = results.iter()
+            .filter(|r| r.section == "CAT")
+            .map(|r| r.label.as_str())
+            .collect();
+        assert_eq!(cat_labels, ["value", "events", "host", "tags"].iter().copied().collect());
+        assert!(results.iter()
+            .filter(|r| r.section == "DOG")
+            .all(|r| r.label == "value"));
+    }
+
+    // ── New CAT handler tests ──────────────────────────────────────────────
+
+    #[test]
+    fn cat_count_handler_counts_events() {
+        let data = include_bytes!("../tests/fixtures/one_of_each.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "events").unwrap();
+        assert_eq!(r.value, "2"); // Event alpha, Event beta
+    }
+
+    #[test]
+    fn cat_first_handler_returns_first_host() {
+        let data = include_bytes!("../tests/fixtures/one_of_each.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "host").unwrap();
+        assert_eq!(r.value, "server1.example.com"); // first of two Host: lines
+    }
+
+    #[test]
+    fn cat_collect_handler_joins_tags() {
+        let data = include_bytes!("../tests/fixtures/one_of_each.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "tags").unwrap();
+        assert_eq!(r.value, "red, blue");
+    }
+
+    // ── Handler and finalizer mechanics ───────────────────────────────────
+
+    #[test]
+    fn count_handler_counts_matches() {
+        use crate::sections::{ContentPattern, SectionDef, handlers, finalizers};
+        use crate::patterns::CompiledSection;
+
+        // Build a one-off section using the count handler
+        let def = SectionDef {
+            name: "TEST",
+            header_pattern: r"^Test \d+",
+            content_patterns: &[
+                ContentPattern { label: "hits", regex: r"AddVal \d+", handler: handlers::count },
+            ],
+            finalizer: finalizers::identity,
+        };
+        let re = regex::bytes::Regex::new(def.content_patterns[0].regex).unwrap();
+        let compiled = CompiledSection {
+            patterns: vec![crate::patterns::CompiledPattern {
+                label:   "hits".to_string(),
+                regex:   re,
+                handler: handlers::count,
+            }],
+        };
+
+        // Fake a boundary covering the entire input
+        let data = b"AddVal 10\nAddVal 20\nAddVal 30\n";
+        let boundary = crate::boundaries::SectionBoundary {
+            section_idx: 0,
+            name: "TEST".to_string(),
+            start: 0,
+            end: data.len() as u64,
+        };
+
+        // Temporarily override SECTIONS isn't possible with a const, so call
+        // the handler directly to verify count behaviour.
+        let caps: Vec<Vec<u8>> = compiled.patterns[0].regex
+            .captures_iter(data)
+            .map(|c| c.get(0).unwrap().as_bytes().to_vec())
+            .collect();
+        let cap_refs: Vec<&[u8]> = caps.iter().map(Vec::as_slice).collect();
+        assert_eq!(handlers::count(&cap_refs), "3");
+        let _ = (def, boundary); // suppress unused warnings
+    }
+
+    #[test]
+    fn collect_handler_joins_captures() {
+        use crate::sections::handlers;
+        let caps: &[&[u8]] = &[b"alpha", b"beta", b"gamma"];
+        assert_eq!(handlers::collect(caps), "alpha, beta, gamma");
+    }
+
+    #[test]
+    fn first_handler_returns_first_only() {
+        use crate::sections::handlers;
+        let caps: &[&[u8]] = &[b"first", b"second"];
+        assert_eq!(handlers::first(caps), "first");
+    }
+
+    #[test]
+    fn first_handler_empty_returns_empty_string() {
+        use crate::sections::handlers;
+        assert_eq!(handlers::first(&[]), "");
+    }
+
+    #[test]
+    fn finalizer_can_filter_results() {
+        use crate::state::ParseResult;
+
+        fn drop_zeros(mut results: Vec<ParseResult>) -> Vec<ParseResult> {
+            results.retain(|r| r.value != "0");
+            results
+        }
+
+        let input = vec![
+            ParseResult { section: "X".into(), label: "a".into(), offset: 0, value: "0".into() },
+            ParseResult { section: "X".into(), label: "b".into(), offset: 0, value: "42".into() },
+        ];
+        let output = drop_zeros(input);
+        assert_eq!(output.len(), 1);
+        assert_eq!(output[0].label, "b");
     }
 }

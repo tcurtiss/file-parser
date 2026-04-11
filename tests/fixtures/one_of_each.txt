@@ -1,6 +1,12 @@
 Cat Boundary 1
 AddVal 10
 AddVal 20
+Event alpha
+Event beta
+Host: server1.example.com
+Host: server2.example.com
+Tag=red
+Tag=blue
 Dog Boundary 1
 AddVal 5
 AddVal 15

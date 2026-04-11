@@ -1,11 +1,18 @@
-use regex::bytes::Regex;
+use regex::bytes::{Regex, RegexBuilder};
 
 use crate::sections::{SectionDef, SECTIONS};
 
+/// A compiled content pattern, ready to scan against raw bytes.
+pub struct CompiledPattern {
+    pub label:   String,
+    pub regex:   Regex,
+    /// Handler copied from `ContentPattern` — called with all captures after scanning.
+    pub handler: fn(&[&[u8]]) -> String,
+}
+
 /// Compiled patterns for a single section, ready to scan against raw bytes.
 pub struct CompiledSection {
-    /// (label, compiled regex) for each content pattern in this section
-    pub patterns: Vec<(String, Regex)>,
+    pub patterns: Vec<CompiledPattern>,
 }
 
 /// Compile content patterns for all sections upfront so workers share read-only data.
@@ -17,10 +24,16 @@ fn compile_section(section: &SectionDef) -> anyhow::Result<CompiledSection> {
     let patterns = section
         .content_patterns
         .iter()
-        .map(|(label, pat)| {
-            let re = Regex::new(pat)
-                .map_err(|e| anyhow::anyhow!("bad pattern {pat:?}: {e}"))?;
-            Ok((label.to_string(), re))
+        .map(|cp| {
+            let re = RegexBuilder::new(cp.regex)
+                .multi_line(true)
+                .build()
+                .map_err(|e| anyhow::anyhow!("bad pattern {:?}: {e}", cp.regex))?;
+            Ok(CompiledPattern {
+                label:   cp.label.to_string(),
+                regex:   re,
+                handler: cp.handler,
+            })
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
 

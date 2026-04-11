@@ -1,10 +1,17 @@
 Cat Boundary 1
 AddVal 100
-random line
+Event foo
+Host: host1
+Tag=x
 Dog Boundary 1
 AddVal 50
 another random line
 Cat Boundary 2
 AddVal 200
+Event bar
+Event baz
+Host: host2
+Tag=y
+Tag=z
 Dog Boundary 2
 AddVal 75
