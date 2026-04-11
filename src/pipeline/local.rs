@@ -25,7 +25,7 @@ pub fn run(path: &Path, state: Arc<AppState>, _workers: usize) -> Result<()> {
     let boundaries = scan_boundaries(&mmap);
 
     if boundaries.is_empty() {
-        eprintln!("warning: no section boundaries found");
+        state.log("warning: no section boundaries found");
         state.set_complete();
         return Ok(());
     }

@@ -33,16 +33,16 @@ fn main() -> Result<()> {
 
     drop(file); // pipeline opens the file itself
 
-    eprintln!(
+    let state = Arc::new(state::AppState::new(file_size, args.gui));
+
+    state.log(&format!(
         "file-parser: {} | {:.2} GB | {} | {} worker{}",
         args.file.display(),
         file_size as f64 / 1e9,
         if remote { "remote" } else { "local" },
         workers,
         if workers == 1 { "" } else { "s" },
-    );
-
-    let state = Arc::new(state::AppState::new(file_size));
+    ));
 
     // Spawn the parser pipeline in a background thread so the UI stays responsive
     {
@@ -56,7 +56,7 @@ fn main() -> Result<()> {
                 pipeline::local::run(&path, Arc::clone(&state), workers)
             };
             if let Err(e) = result {
-                eprintln!("pipeline error: {e}");
+                state.log(&format!("pipeline error: {e}"));
             }
             state.set_complete();
         });

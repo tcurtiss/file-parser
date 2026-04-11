@@ -51,16 +51,25 @@ pub struct AppState {
     pub workers:         Mutex<Vec<Arc<WorkerState>>>,
     pub results:         Mutex<Vec<ParseResult>>,
     complete:            AtomicBool,
+    silent:              bool,
 }
 
 impl AppState {
-    pub fn new(file_size: u64) -> Self {
+    pub fn new(file_size: u64, silent: bool) -> Self {
         Self {
             net_bytes_done:  AtomicU64::new(0),
             net_bytes_total: AtomicU64::new(file_size),
             workers:         Mutex::new(Vec::new()),
             results:         Mutex::new(Vec::new()),
             complete:        AtomicBool::new(false),
+            silent,
+        }
+    }
+
+    /// Print to stderr only when not in GUI mode.
+    pub fn log(&self, msg: &str) {
+        if !self.silent {
+            eprintln!("{msg}");
         }
     }
 

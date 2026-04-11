@@ -61,7 +61,7 @@ pub fn run(path: &Path, state: Arc<AppState>, _workers: usize) -> Result<()> {
                         let total = bytes_written.fetch_add(n as u64, Ordering::Release) + n as u64;
                         state.net_bytes_done.store(total, Ordering::Relaxed);
                     }
-                    Err(e)  => { eprintln!("read error: {e}"); break; }
+                    Err(e)  => { state.log(&format!("read error: {e}")); break; }
                 }
             }
             write_done.store(true, Ordering::Release);
