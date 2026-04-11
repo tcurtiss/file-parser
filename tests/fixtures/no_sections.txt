@@ -1,0 +1,4 @@
+This file contains no section headers at all.
+AddVal 999
+Just plain text throughout the entire file.
+More filler with numbers like 1234 and 5678 that are not AddVal lines.

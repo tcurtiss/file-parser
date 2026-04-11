@@ -79,10 +79,53 @@ Requires Rust 1.75+ and Cargo.
 cargo build
 
 # Optimised release build (LTO, size-optimised)
-cargo release
+cargo build --release
 ```
 
-### Dependencies
+## Testing
+
+```bash
+# Run the full test suite
+cargo test
+
+# Run only boundary-detection tests
+cargo test boundaries
+
+# Run only parse/accumulation tests
+cargo test worker
+
+# Run a single test by name
+cargo test preamble_addval_not_counted
+
+# Show stdout from passing tests (useful when debugging)
+cargo test -- --nocapture
+```
+
+### Test structure
+
+| Location | What is tested |
+|----------|----------------|
+| `src/boundaries.rs` | `scan_boundaries()` — header detection, ordering, section offsets |
+| `src/worker.rs` | Full pipeline — AddVal accumulation, zero-sum, preamble exclusion, multi-boundary independence |
+| `src/source.rs` | URL vs path detection |
+
+### Fixture files
+
+Test inputs live in `tests/fixtures/`. To add a new test scenario, drop a `.txt` file there and reference it in the relevant `#[cfg(test)]` block with:
+
+```rust
+let data = include_bytes!("../tests/fixtures/your_file.txt");
+```
+
+| Fixture | Purpose |
+|---------|---------|
+| `one_of_each.txt` | One CAT + one DOG section with known sums |
+| `multi_boundary.txt` | Two CATs + two DOGs, each summed independently |
+| `no_addval.txt` | Sections with no matching lines — expects zero sums |
+| `no_sections.txt` | No section headers — expects empty result set |
+| `preamble.txt` | AddVal lines before first header — must not be counted |
+
+## Dependencies
 
 | Crate | Purpose |
 |-------|---------|

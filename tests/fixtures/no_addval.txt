@@ -1,0 +1,7 @@
+Cat Boundary 1
+Just some text with no AddVal lines at all.
+Random filler: status=OK elapsed=1234ms
+
+Dog Boundary 1
+More content with no AddVal patterns either.
+Another filler line here.

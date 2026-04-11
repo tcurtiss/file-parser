@@ -1,0 +1,7 @@
+Preamble text that appears before any section header.
+AddVal 999
+This AddVal line is in the preamble and must NOT be counted in any section.
+
+Cat Boundary 1
+AddVal 42
+This is the only AddVal that should be counted, in the CAT section.

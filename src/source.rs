@@ -23,10 +23,6 @@ impl Source {
         }
     }
 
-    pub fn is_url(&self) -> bool {
-        matches!(self, Source::Url(_))
-    }
-
     pub fn as_path(&self) -> Option<&Path> {
         match self {
             Source::File(p) => Some(p),

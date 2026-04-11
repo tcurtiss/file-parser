@@ -1,0 +1,10 @@
+Cat Boundary 1
+AddVal 100
+random line
+Dog Boundary 1
+AddVal 50
+another random line
+Cat Boundary 2
+AddVal 200
+Dog Boundary 2
+AddVal 75

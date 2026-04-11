@@ -1,0 +1,77 @@
+Some preamble text before any sections begin.
+This line is just filler and should be ignored by the parser.
+
+Random noise: alpha bravo charlie delta echo foxtrot
+
+Cat Boundary 1
+This is the first cat section.
+AddVal 42
+Some random text here that should be ignored.
+AddVal 17
+
+Another filler line with no relevance.
+AddVal 100
+The parser should skip lines that do not match any content pattern.
+
+Unrelated data: foo=bar baz=qux
+AddVal 3
+
+This line is blank above and below.
+
+AddVal 250
+End of first cat block content.
+
+Dog Boundary 1
+Starting the first dog section now.
+AddVal 88
+
+Random log entry: 2024-01-15 INFO something happened
+AddVal 55
+AddVal 12
+
+Blank line follows:
+
+AddVal 900
+Some more filler: lorem ipsum dolor sit amet consectetur.
+AddVal 7
+
+Dog Boundary 2
+Second dog section begins here.
+AddVal 200
+
+Noise noise noise.
+AddVal 33
+
+Yet another line of random text with numbers like 9999 that are NOT AddVal lines.
+AddVal 1
+
+The quick brown fox jumps over the lazy dog.
+
+AddVal 64
+AddVal 128
+
+Cat Boundary 2
+Second cat section.
+AddVal 500
+
+Random: the answer is not 42 here unless prefixed with AddVal.
+AddVal 11
+
+Filler: status=OK result=pass elapsed=1234ms
+
+AddVal 75
+AddVal 25
+
+Some trailing text in the second cat section.
+AddVal 8
+
+Dog Boundary 3
+Third and final dog section.
+AddVal 400
+AddVal 50
+
+Miscellaneous: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AddVal 20
+
+Last random line before end of file.
+AddVal 6

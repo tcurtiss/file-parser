@@ -20,9 +20,9 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // ── Bottom button bar — must be declared before central content ────
-        egui::TopBottomPanel::bottom("controls")
+        egui::Panel::bottom("controls")
             .show_separator_line(true)
-            .show(ui.ctx(), |ui| {
+            .show_inside(ui, |ui| {
                 ui.add_space(6.0);
                 ui.horizontal(|ui| {
                     let complete = self.state.is_complete();

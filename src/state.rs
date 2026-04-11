@@ -8,6 +8,7 @@ pub enum WorkerStatus {
     Waiting,
     Running,
     Done,
+    #[allow(dead_code)]
     Failed,
 }
 

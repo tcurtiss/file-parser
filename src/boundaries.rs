@@ -66,3 +66,67 @@ pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
 
     boundaries
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_one_cat_and_one_dog() {
+        let data = include_bytes!("../tests/fixtures/one_of_each.txt");
+        let b = scan_boundaries(data);
+        assert_eq!(b.len(), 2);
+        assert_eq!(b[0].name, "CAT");
+        assert_eq!(b[1].name, "DOG");
+    }
+
+    #[test]
+    fn no_headers_returns_empty() {
+        let data = include_bytes!("../tests/fixtures/no_sections.txt");
+        let b = scan_boundaries(data);
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn preamble_not_captured_in_section() {
+        let data = include_bytes!("../tests/fixtures/preamble.txt");
+        let b = scan_boundaries(data);
+        assert_eq!(b.len(), 1);
+        assert_eq!(b[0].name, "CAT");
+        // The CAT section content must start after the header line, not at byte 0
+        assert!(b[0].start > 0);
+    }
+
+    #[test]
+    fn multiple_boundaries_ordered_by_position() {
+        let data = include_bytes!("../tests/fixtures/multi_boundary.txt");
+        let b = scan_boundaries(data);
+        assert_eq!(b.len(), 4);
+        assert_eq!(b[0].name, "CAT");
+        assert_eq!(b[1].name, "DOG");
+        assert_eq!(b[2].name, "CAT");
+        assert_eq!(b[3].name, "DOG");
+        // Offsets must be strictly increasing
+        for w in b.windows(2) {
+            assert!(w[0].start < w[1].start);
+        }
+    }
+
+    #[test]
+    fn sections_do_not_overlap() {
+        // w[0].end points at the next header's match start; w[1].start is after
+        // that header line — so end < start (header bytes sit between them).
+        let data = include_bytes!("../tests/fixtures/multi_boundary.txt");
+        let b = scan_boundaries(data);
+        for w in b.windows(2) {
+            assert!(w[0].end <= w[1].start, "sections overlap: end={} start={}", w[0].end, w[1].start);
+        }
+    }
+
+    #[test]
+    fn last_section_end_equals_file_length() {
+        let data = include_bytes!("../tests/fixtures/one_of_each.txt");
+        let b = scan_boundaries(data);
+        assert_eq!(b.last().unwrap().end, data.len() as u64);
+    }
+}
