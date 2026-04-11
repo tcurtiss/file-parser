@@ -12,6 +12,8 @@ pub struct SectionBoundary {
     pub start:       u64,
     /// Byte offset past the last content byte (exclusive)
     pub end:         u64,
+    /// 1-based line number of the first content line (after the header line)
+    pub line_start:  u64,
 }
 
 /// Scan `data` for section boundaries defined in `SECTIONS`.
@@ -47,8 +49,12 @@ pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
     // Sort by position in file; stable so earlier SECTIONS entry wins ties
     hits.sort_by_key(|&(start, _, _)| start);
 
-    // Build SectionBoundary list — each section ends where the next one starts
+    // Build SectionBoundary list — each section ends where the next one starts.
+    // Track newlines with a running counter so line_start is O(n) overall.
     let mut boundaries: Vec<SectionBoundary> = Vec::with_capacity(hits.len());
+    let mut newlines_seen: u64 = 0;
+    let mut scan_pos:      usize = 0;
+
     for i in 0..hits.len() {
         let (_, content_start, section_idx) = hits[i];
         let content_end = if i + 1 < hits.len() {
@@ -56,11 +62,20 @@ pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
         } else {
             data.len()
         };
+
+        // Count newlines from where we last stopped up to this content start
+        newlines_seen += data[scan_pos..content_start]
+            .iter()
+            .filter(|&&b| b == b'\n')
+            .count() as u64;
+        scan_pos = content_start;
+
         boundaries.push(SectionBoundary {
             section_idx,
-            name:  SECTIONS[section_idx].name.to_string(),
-            start: content_start as u64,
-            end:   content_end   as u64,
+            name:       SECTIONS[section_idx].name.to_string(),
+            start:      content_start as u64,
+            end:        content_end   as u64,
+            line_start: newlines_seen + 1, // 1-based
         });
     }
 

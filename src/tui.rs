@@ -128,7 +128,7 @@ pub fn run(state: Arc<AppState>) {
     let results = state.results.lock().unwrap();
     println!("\nTotal matches: {}", results.len());
     for result in results.iter().take(20) {
-        println!("  [{:<10}] {:<12} @ {:>10}  {}", result.section, result.label, result.offset, result.value);
+        println!("  [{:<10}] {:<12} @ {:>10}  line {:>7}  {}", result.section, result.label, result.offset, result.line, result.value);
     }
     if results.len() > 20 {
         println!("  ... and {} more", results.len() - 20);

@@ -134,6 +134,7 @@ impl eframe::App for App {
                             ui.strong("Section");
                             ui.strong("Label");
                             ui.strong("Offset");
+                            ui.strong("Line");
                             ui.strong("Value");
                             ui.end_row();
 
@@ -141,6 +142,7 @@ impl eframe::App for App {
                                 ui.label(&result.section);
                                 ui.label(&result.label);
                                 ui.label(format!("{}", result.offset));
+                                ui.label(format!("{}", result.line));
                                 ui.label(&result.value);
                                 ui.end_row();
                             }

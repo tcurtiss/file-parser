@@ -42,7 +42,10 @@ impl WorkerState {
 pub struct ParseResult {
     pub section: String,
     pub label:   String,
+    /// Byte offset of the section's first content byte within the file
     pub offset:  u64,
+    /// 1-based line number of the section's first content line within the file
+    pub line:    u64,
     pub value:   String,
 }
 

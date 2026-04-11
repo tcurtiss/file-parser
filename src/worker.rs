@@ -60,6 +60,7 @@ pub fn parse_section(
             section: section_def.name.to_string(),
             label:   compiled_pattern.label.clone(),
             offset:  boundary.start,
+            line:    boundary.line_start,
             value,
         });
     }
@@ -204,6 +205,49 @@ mod tests {
         assert_eq!(r.value, "red, blue");
     }
 
+    // ── Large fixture (seed=42, 10 000 lines per section) ─────────────────
+
+    #[test]
+    fn large_cat_sum() {
+        let data = include_bytes!("../tests/fixtures/large.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "value").unwrap();
+        assert_eq!(r.value, "10188918");
+    }
+
+    #[test]
+    fn large_cat_event_count() {
+        let data = include_bytes!("../tests/fixtures/large.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "events").unwrap();
+        assert_eq!(r.value, "988");
+    }
+
+    #[test]
+    fn large_cat_first_host() {
+        let data = include_bytes!("../tests/fixtures/large.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "host").unwrap();
+        assert_eq!(r.value, "gateway.edge");
+    }
+
+    #[test]
+    fn large_cat_tag_count() {
+        let data = include_bytes!("../tests/fixtures/large.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "CAT" && r.label == "tags").unwrap();
+        // 1034 tags joined with ", " — verify count via delimiter
+        assert_eq!(r.value.split(", ").count(), 1034);
+    }
+
+    #[test]
+    fn large_dog_sum() {
+        let data = include_bytes!("../tests/fixtures/large.txt");
+        let results = run_parse(data);
+        let r = results.iter().find(|r| r.section == "DOG" && r.label == "value").unwrap();
+        assert_eq!(r.value, "10031203");
+    }
+
     // ── Handler and finalizer mechanics ───────────────────────────────────
 
     #[test]
@@ -233,9 +277,10 @@ mod tests {
         let data = b"AddVal 10\nAddVal 20\nAddVal 30\n";
         let boundary = crate::boundaries::SectionBoundary {
             section_idx: 0,
-            name: "TEST".to_string(),
-            start: 0,
-            end: data.len() as u64,
+            name:        "TEST".to_string(),
+            start:       0,
+            end:         data.len() as u64,
+            line_start:  1,
         };
 
         // Temporarily override SECTIONS isn't possible with a const, so call
@@ -279,8 +324,8 @@ mod tests {
         }
 
         let input = vec![
-            ParseResult { section: "X".into(), label: "a".into(), offset: 0, value: "0".into() },
-            ParseResult { section: "X".into(), label: "b".into(), offset: 0, value: "42".into() },
+            ParseResult { section: "X".into(), label: "a".into(), offset: 0, line: 1, value: "0".into()  },
+            ParseResult { section: "X".into(), label: "b".into(), offset: 0, line: 1, value: "42".into() },
         ];
         let output = drop_zeros(input);
         assert_eq!(output.len(), 1);

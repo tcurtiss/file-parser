@@ -50,6 +50,29 @@ file-parser --quiet https://example.com/data.txt
 file-parser --workers 8 /data/large-log.txt
 ```
 
+## Results
+
+Each parsed section boundary produces one `ParseResult` per content pattern. Every result carries:
+
+| Field | Description |
+|-------|-------------|
+| `section` | Section name (e.g. `CAT`, `DOG`) |
+| `label` | Content pattern label (e.g. `value`, `events`) |
+| `offset` | Byte offset of the section's first content byte within the file — i.e. the position immediately after the header line's newline. All results from the same boundary share this value. |
+| `line` | 1-based line number of the section's first content line — the line immediately after the header. All results from the same boundary share this value. |
+| `value` | String produced by the pattern's handler (e.g. a sum, count, or comma-joined list) |
+
+Both `offset` and `line` identify **where in the file the section starts**, not where individual matches occur within it. Two boundaries of the same section type (e.g. two `CAT` sections) will always have different `offset` and `line` values.
+
+**Example** — a file whose second section starts at byte 4096 on line 83:
+
+```
+[CAT       ] value        @       4096  line      83  10188918
+[CAT       ] events       @       4096  line      83  988
+[CAT       ] host         @       4096  line      83  gateway.edge
+[CAT       ] tags         @       4096  line      83  red, blue, green
+```
+
 ## Adding or Removing Sections
 
 All section configuration lives in `src/sections.rs`. To add a section, append a `SectionDef` to the `SECTIONS` array. To remove one, delete its entry. Order in the array determines priority when a line matches multiple headers.
