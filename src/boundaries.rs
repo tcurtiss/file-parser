@@ -1,4 +1,4 @@
-use regex::bytes::RegexBuilder;
+use regex::bytes::{Regex, RegexBuilder};
 
 use crate::sections::SECTIONS;
 
@@ -16,13 +16,10 @@ pub struct SectionBoundary {
     pub line_start:  u64,
 }
 
-/// Scan `data` for section boundaries defined in `SECTIONS`.
-///
-/// This is a single-threaded linear pass — fast and cache-friendly.
-/// Returns boundaries in order of appearance.
-pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
-    // Compile one regex per section header pattern
-    let header_res: Vec<_> = SECTIONS
+/// Compile one header regex per section.  Reuse the returned vec across
+/// multiple calls to [`find_header_hits`] to avoid redundant compilation.
+pub fn compile_header_patterns() -> Vec<Regex> {
+    SECTIONS
         .iter()
         .map(|s| {
             RegexBuilder::new(s.header_pattern)
@@ -30,21 +27,42 @@ pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
                 .build()
                 .expect("invalid header_pattern")
         })
-        .collect();
+        .collect()
+}
 
-    // Collect all header hits: (byte_offset_of_match_start, byte_offset_after_line, section_idx)
-    let mut hits: Vec<(usize, usize, usize)> = Vec::new();
-    for (idx, re) in header_res.iter().enumerate() {
-        for m in re.find_iter(data) {
-            // The content starts after the newline that ends the header line
-            let line_end = data[m.end()..]
+/// Scan `slice` for section header hits.  `base` is the file byte offset of
+/// `slice[0]`; all offsets in the returned tuples are absolute file offsets.
+///
+/// Returns `(file_offset_header_start, file_offset_content_start, section_idx)`,
+/// unsorted.  Sort by the first element before building boundaries.
+pub fn find_header_hits(
+    slice:    &[u8],
+    base:     usize,
+    patterns: &[Regex],
+) -> Vec<(usize, usize, usize)> {
+    let mut hits = Vec::new();
+    for (idx, re) in patterns.iter().enumerate() {
+        for m in re.find_iter(slice) {
+            let line_end = slice[m.end()..]
                 .iter()
                 .position(|&b| b == b'\n')
                 .map(|p| m.end() + p + 1)
-                .unwrap_or(data.len());
-            hits.push((m.start(), line_end, idx));
+                .unwrap_or(slice.len());
+            hits.push((base + m.start(), base + line_end, idx));
         }
     }
+    hits
+}
+
+/// Scan `data` for section boundaries defined in `SECTIONS`.
+///
+/// This is a single-threaded linear pass — fast and cache-friendly.
+/// Returns boundaries in order of appearance.
+pub fn scan_boundaries(data: &[u8]) -> Vec<SectionBoundary> {
+    let header_res = compile_header_patterns();
+
+    // Collect all header hits: (byte_offset_of_match_start, byte_offset_after_line, section_idx)
+    let mut hits = find_header_hits(data, 0, &header_res);
 
     // Sort by position in file; stable so earlier SECTIONS entry wins ties
     hits.sort_by_key(|&(start, _, _)| start);
